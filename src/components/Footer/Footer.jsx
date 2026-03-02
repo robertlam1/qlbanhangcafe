@@ -15,7 +15,7 @@ const Footer = () => {
                         <img src={logo} alt="Highlands Coffee" className="footer-logo-img" />
                     </div>
                     <p className="footer-copyright">
-                        ©2025 Highlands Coffee. All rights reserved
+                        ©2025 Galaxy Cafe. All rights reserved
                     </p>
                 </div>
 
@@ -23,7 +23,7 @@ const Footer = () => {
                 <div className="footer-middle">
                     {/* Column 1: VỀ HIGHLANDS */}
                     <div className="footer-column">
-                        <h3 className="footer-column-title">VỀ HIGHLANDS</h3>
+                        <h3 className="footer-column-title">VỀ GALAXYCAFE</h3>
                         <ul className="footer-links">
                             <li><a href="/origin">Nguồn gốc</a></li>
                             <li><a href="/services">Dịch vụ</a></li>
