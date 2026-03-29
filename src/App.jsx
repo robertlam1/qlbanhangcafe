@@ -15,7 +15,7 @@ function App() {
   return (
     <>
       {!isLoginPage && <Header />}
-      {/* <Routes>
+      <Routes>
         <Route
           path="/"
           element={
@@ -28,8 +28,8 @@ function App() {
         <Route path="/product/:id" element={<DetailProduct />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cart" element={<Cart />} />
-      </Routes> */}
-      {/* {!isLoginPage && <Footer />} */}
+      </Routes>
+      {!isLoginPage && <Footer />}
     </>
   );
 }

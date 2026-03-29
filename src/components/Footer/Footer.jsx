@@ -66,6 +66,24 @@ const Footer = () => {
                             <i className="fab fa-tiktok"></i>
                         </a>
                     </div>
+                    <div className="footer-map">
+                        <iframe
+                            title="Bản đồ địa điểm Galaxy Cafe"
+                            className="footer-map__iframe"
+                            src="https://www.google.com/maps?q=10.743902,106.6340446&z=17&output=embed&hl=vi"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            allowFullScreen
+                        />
+                        <a
+                            className="footer-map__link"
+                            href="https://maps.app.goo.gl/6RuUrqKaYAFspPe57"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Mở trong Google Maps
+                        </a>
+                    </div>
                 </div>
             </div>
 
