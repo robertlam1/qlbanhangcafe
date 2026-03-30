@@ -36,3 +36,44 @@
     }
 }
 
+.product-list-pagination {
+    max-width: 1300px;
+    margin: 32px auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 16px 24px;
+}
+
+.product-list-pagination__btn {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #3d2b1f;
+    background: #fff;
+    border: 2px solid #c4a574;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.product-list-pagination__btn:hover:not(:disabled) {
+    background: #3d2b1f;
+    color: #fff;
+    border-color: #3d2b1f;
+}
+
+.product-list-pagination__btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.product-list-pagination__info {
+    font-size: 0.95rem;
+    color: #5c4a3d;
+    font-weight: 500;
+    min-width: 7rem;
+    text-align: center;
+}
+

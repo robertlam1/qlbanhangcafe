@@ -72,6 +72,42 @@
     "originalPrice": "80.000₫",
     "rating": "4.9",
     "sold": "27k"
+  },
+  {
+    "id": 7,
+    "name": "Cookies & Cream",
+    "imageKey": "sp3",
+    "sizeS": "S",
+    "sizeM": "M",
+    "sizeL": "L",
+    "currentPrice": "69.000₫",
+    "originalPrice": "80.000₫",
+    "rating": "4.9",
+    "sold": "27k"
+  },
+  {
+    "id": 8,
+    "name": "Cookies & Cream",
+    "imageKey": "sp3",
+    "sizeS": "S",
+    "sizeM": "M",
+    "sizeL": "L",
+    "currentPrice": "69.000₫",
+    "originalPrice": "80.000₫",
+    "rating": "4.9",
+    "sold": "27k"
+  },
+  {
+    "id": 9,
+    "name": "Cookies & Cream",
+    "imageKey": "sp3",
+    "sizeS": "S",
+    "sizeM": "M",
+    "sizeL": "L",
+    "currentPrice": "69.000₫",
+    "originalPrice": "80.000₫",
+    "rating": "4.9",
+    "sold": "27k"
   }
 ]
 

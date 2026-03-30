@@ -11,8 +11,11 @@ const imageMap = {
     sp3: sp3Image
 };
 
+const PRODUCTS_PER_PAGE = 6;
+
 const ProductList = () => {
     const [products, setProducts] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -41,6 +44,19 @@ const ProductList = () => {
         loadProducts();
     }, []);
 
+    const totalPages = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_PAGE));
+
+    useEffect(() => {
+        setCurrentPage((p) => Math.min(p, totalPages));
+    }, [totalPages]);
+
+    const safePage = Math.min(currentPage, totalPages);
+    const start = (safePage - 1) * PRODUCTS_PER_PAGE;
+    const visibleProducts = products.slice(start, start + PRODUCTS_PER_PAGE);
+
+    const goPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
+    const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
+
     if (isLoading) {
         return <div className="product-list-container">Đang tải sản phẩm...</div>;
     }
@@ -52,10 +68,33 @@ const ProductList = () => {
     return (
         <div className="product-list-container">
             <div className="product-list">
-                {products.map((product) => (
+                {visibleProducts.map((product) => (
                     <ProductCard key={product.id} product={product} />
                 ))}
             </div>
+            {products.length > PRODUCTS_PER_PAGE && (
+                <div className="product-list-pagination" role="navigation" aria-label="Phân trang sản phẩm">
+                    <button
+                        type="button"
+                        className="product-list-pagination__btn"
+                        onClick={goPrev}
+                        disabled={safePage <= 1}
+                    >
+                        ← Trang trước
+                    </button>
+                    <span className="product-list-pagination__info">
+                        Trang {safePage} / {totalPages}
+                    </span>
+                    <button
+                        type="button"
+                        className="product-list-pagination__btn"
+                        onClick={goNext}
+                        disabled={safePage >= totalPages}
+                    >
+                        Trang sau →
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
