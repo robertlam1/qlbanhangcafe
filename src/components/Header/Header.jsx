@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 import logoImage from '../../img/logo.png';
@@ -7,6 +7,8 @@ const Header = () => {
     const [hoveredMenu, setHoveredMenu] = useState(null);
     const [cartCount, setCartCount] = useState(0);
     const [currentUser, setCurrentUser] = useState(null);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const userMenuRef = useRef(null);
     const navigate = useNavigate();
 
     // Lấy số lượng món trong giỏ hàng (tổng quantity) và thông tin user
@@ -50,23 +52,45 @@ const Header = () => {
         updateCartCount();
         updateCurrentUser();
 
-        // Lắng nghe khi giỏ hàng hoặc user được cập nhật
-        window.addEventListener('cartUpdated', updateCartCount);
-        window.addEventListener('userUpdated', updateCurrentUser);
-        window.addEventListener('storage', () => {
+        const onStorageSync = () => {
             updateCartCount();
             updateCurrentUser();
-        });
+        };
+
+        window.addEventListener('cartUpdated', updateCartCount);
+        window.addEventListener('userUpdated', updateCurrentUser);
+        window.addEventListener('storage', onStorageSync);
 
         return () => {
             window.removeEventListener('cartUpdated', updateCartCount);
             window.removeEventListener('userUpdated', updateCurrentUser);
-            window.removeEventListener('storage', () => {
-                updateCartCount();
-                updateCurrentUser();
-            });
+            window.removeEventListener('storage', onStorageSync);
         };
     }, []);
+
+    useEffect(() => {
+        if (!userMenuOpen) return;
+        const onPointerDown = (e) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+                setUserMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onPointerDown);
+        return () => document.removeEventListener('mousedown', onPointerDown);
+    }, [userMenuOpen]);
+
+    useEffect(() => {
+        if (!currentUser) setUserMenuOpen(false);
+    }, [currentUser]);
+
+    const handleLogout = () => {
+        localStorage.removeItem('currentUser');
+        setUserMenuOpen(false);
+        window.dispatchEvent(new Event('userUpdated'));
+        navigate('/');
+    };
+
+    const userLabel = currentUser ? (currentUser.name || currentUser.user) : 'Đăng nhập';
 
     // Dropdown menu items
     const coffeeMenuItems = [
@@ -99,12 +123,51 @@ const Header = () => {
 
                     {/* Right: User Actions */}
                     <div className="header-user-actions">
-                        <button
-                            className="login-link"
-                            onClick={() => navigate('/login')}
-                        >
-                            {currentUser ? (currentUser.name || currentUser.user) : 'Đăng nhập'}
-                        </button>
+                        {currentUser ? (
+                            <div className="header-user-menu" ref={userMenuRef}>
+                                <button
+                                    type="button"
+                                    className="login-link header-user-menu__trigger"
+                                    aria-expanded={userMenuOpen}
+                                    aria-haspopup="true"
+                                    onClick={() => setUserMenuOpen((o) => !o)}
+                                >
+                                    {userLabel}
+                                    <i className={`fas fa-chevron-down header-user-menu__caret ${userMenuOpen ? 'is-open' : ''}`} aria-hidden />
+                                </button>
+                                {userMenuOpen && (
+                                    <div className="header-user-dropdown" role="menu">
+                                        <button
+                                            type="button"
+                                            className="header-user-dropdown__item"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                setUserMenuOpen(false);
+                                                navigate('/profile');
+                                            }}
+                                        >
+                                            Hồ sơ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="header-user-dropdown__item header-user-dropdown__item--logout"
+                                            role="menuitem"
+                                            onClick={handleLogout}
+                                        >
+                                            Đăng xuất
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className="login-link"
+                                onClick={() => navigate('/login')}
+                            >
+                                Đăng nhập
+                            </button>
+                        )}
                         <span className="action-separator">|</span>
                         <div className="language-selector">
                             <span className="lang-active">VN</span>

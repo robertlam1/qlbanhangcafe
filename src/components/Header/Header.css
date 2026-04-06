@@ -94,6 +94,74 @@
     color: #1a472a;
 }
 
+button.login-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.header-user-menu {
+    position: relative;
+}
+
+.header-user-menu__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-user-menu__caret {
+    font-size: 10px;
+    opacity: 0.75;
+    transition: transform 0.2s;
+}
+
+.header-user-menu__caret.is-open {
+    transform: rotate(180deg);
+}
+
+.header-user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+    z-index: 1100;
+    animation: fadeIn 0.2s ease-in;
+}
+
+.header-user-dropdown__item {
+    display: block;
+    width: 100%;
+    padding: 10px 18px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.header-user-dropdown__item:hover {
+    background: #f5f5f5;
+    color: #1a472a;
+}
+
+.header-user-dropdown__item--logout {
+    color: #c8102e;
+}
+
+.header-user-dropdown__item--logout:hover {
+    background: #fff5f5;
+    color: #a00d26;
+}
+
 .action-separator {
     color: #ccc;
 }
