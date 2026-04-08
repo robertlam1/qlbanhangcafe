@@ -179,7 +179,7 @@ const Header = () => {
                             onClick={() => navigate('/cart')}
                         >
                             <i className="fas fa-shopping-cart"></i>
-                            <span>Giỏ hàng</span>
+                            <span>Giỏ hàngsssss</span>
                             <span className="cart-badge">{cartCount}</span>
                         </button>
                     </div>
