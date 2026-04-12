@@ -4,7 +4,23 @@
     "user": "Lam",
     "pass": "123",
     "role": "emloemployee"
+  },
+  {
+    "id": 2,
+    "user": "la",
+    "pass": "123",
+    "role": "customer"
+  },
+  {
+    "id": 3,
+    "user": "la2",
+    "pass": "123",
+    "role": "customer"
+  },
+  {
+    "id": 4,
+    "user": "tam",
+    "pass": "123",
+    "role": "customer"
   }
-  
 ]
-

@@ -135,6 +135,10 @@
   color: #64748b;
 }
 
+.login-footer--spaced {
+  margin-top: 18px;
+}
+
 .signup-link {
   margin-left: 4px;
   color: #6366f1;
@@ -162,6 +166,56 @@
   font-size: 13px;
   color: #ef4444;
   text-align: left;
+}
+
+.login-success {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #16a34a;
+  text-align: left;
+}
+
+.login-hint {
+  margin: -12px 0 18px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+  text-align: left;
+}
+
+.forgot-row {
+  text-align: right;
+  margin-top: -6px;
+}
+
+.forgot-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6366f1;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6366f1;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
 }
 
 
