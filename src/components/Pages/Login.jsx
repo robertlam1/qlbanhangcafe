@@ -50,8 +50,11 @@ const Login = () => {
       // Thông báo cho Header cập nhật tên
       window.dispatchEvent(new Event('userUpdated'));
 
-      // Điều hướng về trang chủ (hoặc trang trước đó)
-      navigate('/');
+      if (matchedAccount.role === 'staff') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error(err);
       setError('Đã xảy ra lỗi, vui lòng thử lại sau');
