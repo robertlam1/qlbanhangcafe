@@ -9,6 +9,10 @@ function accountsPath() {
   return path.resolve(__dirname, 'public', 'account.json');
 }
 
+function productsPath() {
+  return path.resolve(__dirname, 'public', 'products.json');
+}
+
 async function readJsonBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -251,8 +255,59 @@ function handleResetPassword(req, res) {
   })();
 }
 
+function handleGetProducts(_req, res) {
+  try {
+    const raw = fs.readFileSync(productsPath(), 'utf8');
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data)) {
+      sendJson(res, 500, { error: 'products.json không hợp lệ' });
+      return;
+    }
+    sendJson(res, 200, data);
+  } catch (err) {
+    console.error(err);
+    sendJson(res, 500, { error: 'Không đọc được products.json' });
+  }
+}
+
+function handlePutProducts(req, res) {
+  (async () => {
+    try {
+      const body = await readJsonBody(req);
+      const list = Array.isArray(body) ? body : body?.products;
+      if (!Array.isArray(list)) {
+        sendJson(res, 400, { error: 'Cần mảng sản phẩm hoặc { products: [...] }' });
+        return;
+      }
+      for (const item of list) {
+        if (!item || typeof item !== 'object' || item.id == null) {
+          sendJson(res, 400, { error: 'Mỗi sản phẩm phải có id' });
+          return;
+        }
+      }
+      fs.writeFileSync(productsPath(), `${JSON.stringify(list, null, 2)}\n`, 'utf8');
+      sendJson(res, 200, { ok: true, message: 'Đã lưu products.json' });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        sendJson(res, 400, { error: 'Body JSON không hợp lệ' });
+        return;
+      }
+      console.error(err);
+      sendJson(res, 500, { error: 'Không ghi được products.json' });
+    }
+  })();
+}
+
 function accountsApiMiddleware(req, res, next) {
   const pathname = (req.url || '').split('?')[0];
+  if (pathname === '/api/products' && req.method === 'GET') {
+    handleGetProducts(req, res);
+    return;
+  }
+  if (pathname === '/api/products' && req.method === 'PUT') {
+    handlePutProducts(req, res);
+    return;
+  }
   if (pathname === '/api/register' && req.method === 'POST') {
     handleRegister(req, res);
     return;
@@ -272,7 +327,7 @@ function accountsApiMiddleware(req, res, next) {
   next();
 }
 
-/** Vite plugin: API ghi public/account.json (dev + preview). */
+/** Vite plugin: API ghi public/account.json và public/products.json (dev + preview). */
 export function registerAccountApiPlugin() {
   return {
     name: 'register-account-api',

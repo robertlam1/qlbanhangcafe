@@ -8,11 +8,15 @@ import Cart from './components/Pages/Cart';
 import Login from './components/Pages/Login';
 import Signup from './components/Pages/Signup';
 import Profile from './components/Pages/Profile';
+import Admin from './components/Pages/Admin';
 import Footer from './components/Footer/Footer';
 
 function App() {
   const location = useLocation();
-  const hideChrome = location.pathname === '/login' || location.pathname === '/signup';
+  const hideChrome =
+    location.pathname === '/login' ||
+    location.pathname === '/signup' ||
+    location.pathname === '/admin';
 
   return (
     <>
@@ -31,6 +35,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/cart" element={<Cart />} />
       </Routes>
       {!hideChrome && <Footer />}

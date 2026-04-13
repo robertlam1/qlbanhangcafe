@@ -1,15 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import sp1Image from '../../img/sp1.png';
-import sp2Image from '../../img/sp2.png';
-import sp3Image from '../../img/sp3.png';
+import { imageMap } from '../../utils/productImages';
 import './DetailProduct.css';
-
-const imageMap = {
-    sp1: sp1Image,
-    sp2: sp2Image,
-    sp3: sp3Image
-};
 
 const DetailProduct = () => {
     const { id } = useParams();

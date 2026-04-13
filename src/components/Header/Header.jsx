@@ -148,6 +148,19 @@ const Header = () => {
                                         >
                                             Hồ sơ
                                         </button>
+                                        {currentUser.role === 'staff' && (
+                                            <button
+                                                type="button"
+                                                className="header-user-dropdown__item"
+                                                role="menuitem"
+                                                onClick={() => {
+                                                    setUserMenuOpen(false);
+                                                    navigate('/admin');
+                                                }}
+                                            >
+                                                Quản trị
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
                                             className="header-user-dropdown__item header-user-dropdown__item--logout"

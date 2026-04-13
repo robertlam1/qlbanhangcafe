@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [
     {
         "id": 1,
@@ -11,4 +12,19 @@
         "id": 3,
         "name": "Freeze"
     }
+=======
+[
+    {
+        "id": 1,
+        "name": "Cà phê"
+    },
+    {
+        "id": 2,
+        "name": "Trà"
+    },
+    {
+        "id": 3,
+        "name": "Freeze"
+    }
+>>>>>>> 6dca359 (Add multiple files)
 ]
