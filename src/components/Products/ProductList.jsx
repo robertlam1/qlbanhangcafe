@@ -88,8 +88,7 @@ const ProductList = () => {
                             <li>
                                 <button
                                     type="button"
-                                    className={`product-list-sidebar__btn
-                                        ${selectedCategoryId == null ? ' product-list-sidebar__btn--active' : ''}`}
+                                    className={`product-list-sidebar__btn${selectedCategoryId == null ? ' product-list-sidebar__btn--active' : ''}`}
                                     onClick={() => setSelectedCategoryId(null)}
                                 >
                                     Tất cả
