@@ -19,10 +19,24 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
+    const trimmedUser = username.trim();
+    const trimmedPass = password.trim();
+    if (!trimmedUser && !trimmedPass) {
+      setError('Không được để trống tên đăng nhập và mật khẩu');
+      return;
+    }
+    if (!trimmedUser) {
+      setError('Không được để trống tên đăng nhập');
+      return;
+    }
+    if (!trimmedPass) {
+      setError('Không được để trống mật khẩu');
+      return;
+    }
+
     try {
-      // Dùng field "user" để đăng nhập (ví dụ: Lam) – không phân biệt hoa/thường
-      const normalizedUsername = username.trim().toLowerCase();
-      const normalizedPassword = password.trim();
+      const normalizedUsername = trimmedUser.toLowerCase();
+      const normalizedPassword = trimmedPass;
 
       const response = await fetch('/account.json');
       if (!response.ok) {
@@ -42,12 +56,10 @@ const Login = () => {
         return;
       }
 
-      // Lưu thông tin người dùng vào localStorage
       const publicInfo = { ...matchedAccount };
       delete publicInfo.pass;
       localStorage.setItem('currentUser', JSON.stringify(publicInfo));
 
-      // Thông báo cho Header cập nhật tên
       window.dispatchEvent(new Event('userUpdated'));
 
       if (matchedAccount.role === 'staff') {
@@ -123,9 +135,6 @@ const Login = () => {
         {forgotMode ? (
           <>
             <h2 className="login-title">Quên mật khẩu</h2>
-            <p className="login-hint">
-              Nhập tên đăng nhập và mật khẩu mới (demo: không gửi email xác thực).
-            </p>
             <form className="login-form" onSubmit={handleForgotSubmit}>
               <div className="form-group">
                 <input

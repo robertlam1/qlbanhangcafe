@@ -10,5 +10,9 @@
     {
         "id": 3,
         "name": "Freeze"
+    },
+        {
+        "id": 4,
+        "name": "Sinh tố"
     }
 ]
