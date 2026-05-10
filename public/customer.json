@@ -1,0 +1,5 @@
+[
+  {"id":1,"name":"Khách hàng 1","phone":"0900000001"}, {"id":2,"name":"Khách hàng 2","phone":"0900000002"}, {"id":3,"name":"Khách hàng 3","phone":"0900000003"}, {"id":4,"name":"Khách hàng 4","phone":"0900000004"}, {"id":5,"name":"Khách hàng 5","phone":"0900000005"},
+  {"id":6,"name":"Khách hàng 6","phone":"0900000006"}, {"id":7,"name":"Khách hàng 7","phone":"0900000007"}, {"id":8,"name":"Khách hàng 8","phone":"0900000008"}, {"id":9,"name":"Khách hàng 9","phone":"0900000009"}, {"id":10,"name":"Khách hàng 10","phone":"0900000010"},
+  {"id":11,"name":"Khách hàng 11","phone":"0900000011"}, {"id":12,"name":"Khách hàng 12","phone":"0900000012"}, {"id":13,"name":"Khách hàng 13","phone":"0900000013"}, {"id":14,"name":"Khách hàng 14","phone":"0900000014"}, {"id":15,"name":"Khách hàng 15","phone":"0900000015"}
+]

@@ -1,0 +1,6 @@
+[
+  { "id": 1, "role": "Quản lý", "name": "Nguyễn Thị Mai", "gender": "Nữ", "birthdate": "1985-10-15", "phone": "0912345670" },
+  { "id": 2, "role": "Nhân viên", "name": "Trần Văn Bình", "gender": "Nam", "birthdate": "1992-05-20", "phone": "0912345671" },
+  { "id": 3, "role": "Nhân viên", "name": "Lê Hoàng Yến", "gender": "Nữ", "birthdate": "1995-08-12", "phone": "0912345672" }
+  
+]

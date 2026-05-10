@@ -298,6 +298,35 @@ function handlePutProducts(req, res) {
   })();
 }
 
+function handlePutPublicJsonArray(req, res, filename, okMessage) {
+  (async () => {
+    try {
+      const body = await readJsonBody(req);
+      const list = Array.isArray(body) ? body : body?.items ?? body?.data;
+      if (!Array.isArray(list)) {
+        sendJson(res, 400, { error: 'Cần mảng JSON hoặc { items: [...] }' });
+        return;
+      }
+      for (const item of list) {
+        if (!item || typeof item !== 'object' || item.id == null) {
+          sendJson(res, 400, { error: 'Mỗi bản ghi phải có id' });
+          return;
+        }
+      }
+      const filePath = path.resolve(__dirname, 'public', filename);
+      fs.writeFileSync(filePath, `${JSON.stringify(list, null, 2)}\n`, 'utf8');
+      sendJson(res, 200, { ok: true, message: okMessage });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        sendJson(res, 400, { error: 'Body JSON không hợp lệ' });
+        return;
+      }
+      console.error(err);
+      sendJson(res, 500, { error: `Không ghi được ${filename}` });
+    }
+  })();
+}
+
 function accountsApiMiddleware(req, res, next) {
   const pathname = (req.url || '').split('?')[0];
   if (pathname === '/api/products' && req.method === 'GET') {
@@ -306,6 +335,26 @@ function accountsApiMiddleware(req, res, next) {
   }
   if (pathname === '/api/products' && req.method === 'PUT') {
     handlePutProducts(req, res);
+    return;
+  }
+  if (pathname === '/api/category' && req.method === 'PUT') {
+    handlePutPublicJsonArray(req, res, 'category.json', 'Đã lưu category.json');
+    return;
+  }
+  if (pathname === '/api/customer' && req.method === 'PUT') {
+    handlePutPublicJsonArray(req, res, 'customer.json', 'Đã lưu customer.json');
+    return;
+  }
+  if (pathname === '/api/employee' && req.method === 'PUT') {
+    handlePutPublicJsonArray(req, res, 'employee.json', 'Đã lưu employee.json');
+    return;
+  }
+  if (pathname === '/api/invoicedetails' && req.method === 'PUT') {
+    handlePutPublicJsonArray(req, res, 'invoicedetails.json', 'Đã lưu invoicedetails.json');
+    return;
+  }
+  if (pathname === '/api/bill' && req.method === 'PUT') {
+    handlePutPublicJsonArray(req, res, 'bill.json', 'Đã lưu bill.json');
     return;
   }
   if (pathname === '/api/register' && req.method === 'POST') {
@@ -327,7 +376,7 @@ function accountsApiMiddleware(req, res, next) {
   next();
 }
 
-/** Vite plugin: API ghi public/account.json và public/products.json (dev + preview). */
+/** Vite plugin: API ghi public/*.json cho account + collections (dev + preview). */
 export function registerAccountApiPlugin() {
   return {
     name: 'register-account-api',

@@ -1,61 +1,51 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AdminProduct from './Adminproduct';
+import AdminCategory from './Admincategory';
+import AdminCustomer from './Admincustomer';
+import AdminEmployee from './Adminemployee';
+import AdminBill from './Adminbill';
+import AdminInvoiceDetails from './Admininvoicedetails';
 import './Admin.css';
 
 const jsonBase = import.meta.env.BASE_URL || '/';
 
-const emptyForm = () => ({
-  id: '',
-  name: '',
-  imageKey: 'sp1',
-  sizeS: 'S',
-  sizeM: 'M',
-  sizeL: 'L',
-  currentPrice: '',
-  originalPrice: '',
-  discount: '',
-  rating: '',
-  sold: '',
-  categoryid: '',
-});
+const SECTION_LABEL = {
+  dashboard: 'Dashboard',
+  products: 'Sản phẩm',
+  category: 'Danh mục',
+  customer: 'Khách hàng',
+  employee: 'Nhân viên',
+  bill: 'Hóa đơn',
+  invoiceDetails: 'Chi tiết hóa đơn',
+};
 
-function productToForm(p) {
-  return {
-    id: String(p.id),
-    name: p.name ?? '',
-    imageKey: p.imageKey ?? '',
-    sizeS: p.sizeS ?? 'S',
-    sizeM: p.sizeM ?? 'M',
-    sizeL: p.sizeL ?? 'L',
-    currentPrice: p.currentPrice ?? '',
-    originalPrice: p.originalPrice ?? '',
-    discount: p.discount ?? '',
-    rating: p.rating ?? '',
-    sold: p.sold ?? '',
-    categoryid: p.categoryid != null ? String(p.categoryid) : '',
-  };
+function fmtNumber(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-function formToProduct(form, nextId) {
-  const id = form.id ? Number(form.id) : nextId;
-  const o = {
-    id,
-    name: form.name.trim(),
-    imageKey: form.imageKey.trim() || 'sp1',
-    sizeS: form.sizeS.trim() || 'S',
-    sizeM: form.sizeM.trim() || 'M',
-    sizeL: form.sizeL.trim() || 'L',
-    currentPrice: form.currentPrice.trim(),
-    originalPrice: form.originalPrice.trim(),
-    discount: form.discount.trim(),
-    rating: form.rating.trim(),
-    sold: form.sold.trim(),
+function fmtCurrency(n) {
+  return `${fmtNumber(Number(n) || 0)} đ`;
+}
+
+/** Trạng thái hóa đơn: giá trị trong `bill.json` field `status` */
+const BILL_STATUS_MAP = {
+  delivered: { label: 'Đã giao hàng', cls: 'done' },
+  shipping: { label: 'Vận chuyển', cls: 'shipping' },
+  pending: { label: 'Chưa giải quyết', cls: 'pending' },
+  processing: { label: 'Xử lý', cls: 'processing' },
+};
+
+function billStatusFromJson(statusRaw) {
+  const key = String(statusRaw || '')
+    .trim()
+    .toLowerCase();
+  if (BILL_STATUS_MAP[key]) return { key, ...BILL_STATUS_MAP[key] };
+  return {
+    key: 'unknown',
+    label: key ? String(statusRaw).trim() : 'Chưa xác định',
+    cls: 'unknown',
   };
-  if (form.categoryid !== '' && form.categoryid != null) {
-    o.categoryid = Number(form.categoryid);
-  }
-  return o;
 }
 
 const Admin = () => {
@@ -63,37 +53,18 @@ const Admin = () => {
   const [allowed, setAllowed] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [bills, setBills] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [invoiceDetails, setInvoiceDetails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [saveError, setSaveError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [view, setView] = useState('list');
-  const [form, setForm] = useState(emptyForm);
-  const [isNew, setIsNew] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [adminSection, setAdminSection] = useState('dashboard');
 
-  const persistProducts = useCallback(async (nextList) => {
-    setSaving(true);
-    setSaveError('');
-    try {
-      await axios.put('/api/products', nextList, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      setProducts(nextList);
-      setView('list');
-      setForm(emptyForm());
-      setIsNew(false);
-    } catch (err) {
-      const msg =
-        err.response?.data?.error ||
-        (err.code === 'ERR_NETWORK' || err.response?.status === 404
-          ? 'Chỉ lưu được khi chạy npm run dev hoặc npm run preview (API ghi file trên server).'
-          : null) ||
-        'Không lưu được dữ liệu.';
-      setSaveError(msg);
-    } finally {
-      setSaving(false);
-    }
-  }, []);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     const raw = localStorage.getItem('currentUser');
@@ -120,9 +91,13 @@ const Admin = () => {
       setLoading(true);
       setLoadError('');
       try {
-        const [pRes, cRes] = await Promise.all([
+        const [pRes, cRes, bRes, cuRes, eRes, iRes] = await Promise.all([
           fetch(`${jsonBase}products.json`),
           fetch(`${jsonBase}category.json`),
+          fetch(`${jsonBase}bill.json`),
+          fetch(`${jsonBase}customer.json`),
+          fetch(`${jsonBase}employee.json`),
+          fetch(`${jsonBase}invoicedetails.json`),
         ]);
         if (!pRes.ok) throw new Error('Không tải được products.json');
         const pdata = await pRes.json();
@@ -131,6 +106,22 @@ const Admin = () => {
         if (cRes.ok) {
           const cdata = await cRes.json();
           setCategories(Array.isArray(cdata) ? cdata : []);
+        }
+        if (bRes.ok) {
+          const bdata = await bRes.json();
+          setBills(Array.isArray(bdata) ? bdata : []);
+        }
+        if (cuRes.ok) {
+          const cudata = await cuRes.json();
+          setCustomers(Array.isArray(cudata) ? cudata : []);
+        }
+        if (eRes.ok) {
+          const edata = await eRes.json();
+          setEmployees(Array.isArray(edata) ? edata : []);
+        }
+        if (iRes.ok) {
+          const idata = await iRes.json();
+          setInvoiceDetails(Array.isArray(idata) ? idata : []);
         }
       } catch (e) {
         setLoadError(e.message || 'Lỗi tải dữ liệu');
@@ -142,242 +133,546 @@ const Admin = () => {
     load();
   }, [allowed]);
 
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handler = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [userMenuOpen]);
+
+  const staffInitials = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('currentUser');
+      if (!raw) return 'AD';
+      const u = JSON.parse(raw);
+      const name = String(u.user || u.name || 'Staff').trim();
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (!parts.length) return 'AD';
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    } catch {
+      return 'AD';
+    }
+  }, []);
+
+  const staffDisplayName = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('currentUser');
+      if (!raw) return 'Administrator';
+      const u = JSON.parse(raw);
+      return String(u.user || u.name || 'Staff').trim() || 'Administrator';
+    } catch {
+      return 'Administrator';
+    }
+  }, []);
+
+  const stats = useMemo(() => {
+    const total = products.length;
+    const soldSum = invoiceDetails.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const catCount = categories.length;
+    const uncategorized = products.filter((p) => p.categoryid == null || p.categoryid === '').length;
+    const revenue = bills.reduce((sum, bill) => sum + Number(bill.total || 0), 0);
+    const avgBill = bills.length ? revenue / bills.length : 0;
+
+    return { total, soldSum, catCount, uncategorized, revenue, avgBill };
+  }, [products, categories, invoiceDetails, bills]);
+
+  const topSoldProducts = useMemo(() => {
+    const byProduct = invoiceDetails.reduce((map, item) => {
+      const pid = Number(item.product_id);
+      const quantity = Number(item.quantity || 0);
+      map.set(pid, (map.get(pid) || 0) + quantity);
+      return map;
+    }, new Map());
+
+    return [...byProduct.entries()]
+      .map(([id, sold]) => {
+        const product = products.find((p) => Number(p.id) === id);
+        return {
+          id,
+          sold,
+          name: product?.name || `Sản phẩm #${id}`,
+        };
+      })
+      .sort((a, b) => b.sold - a.sold)
+      .slice(0, 5)
+      .map((p) => {
+        const sold = Number(p.sold || 0);
+        const percent = Math.max(0, Math.min(100, Math.round((sold / 800) * 100)));
+        return { id: p.id, name: p.name, sold, percent };
+      });
+  }, [products, invoiceDetails]);
+
+  const revenueByDate = useMemo(() => {
+    const grouped = bills.reduce((acc, bill) => {
+      const key = String(bill.date || '').slice(0, 10) || 'N/A';
+      acc.set(key, (acc.get(key) || 0) + Number(bill.total || 0));
+      return acc;
+    }, new Map());
+    const rows = [...grouped.entries()]
+      .map(([date, total]) => ({ date, total }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const maxTotal = rows.reduce((m, row) => Math.max(m, row.total), 0);
+
+    return rows.map((row) => ({
+      ...row,
+      percent: maxTotal > 0 ? Math.max(8, Math.round((row.total / maxTotal) * 100)) : 0,
+    }));
+  }, [bills]);
+
+  const billTableRows = useMemo(() => {
+    const customerMap = new Map(customers.map((c) => [Number(c.id), c.name]));
+    const productMap = new Map(products.map((p) => [Number(p.id), p.name]));
+    const detailByBill = invoiceDetails.reduce((map, item) => {
+      const key = Number(item.bill_id);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+      return map;
+    }, new Map());
+
+    return [...bills]
+      .sort((a, b) => Number(b.id) - Number(a.id))
+      .slice(0, 6)
+      .map((bill) => {
+        const details = detailByBill.get(Number(bill.id)) || [];
+        const firstProduct = details[0];
+        const itemName = firstProduct
+          ? productMap.get(Number(firstProduct.product_id)) || `Sản phẩm #${firstProduct.product_id}`
+          : '—';
+        return {
+          id: bill.id,
+          billCode: String(bill.id),
+          customerName: customerMap.get(Number(bill.customer_id)) || `KH #${bill.customer_id}`,
+          itemName,
+          status: billStatusFromJson(bill.status),
+        };
+      });
+  }, [bills, customers, products, invoiceDetails]);
+
+  const vipCustomers = useMemo(() => {
+    if (!bills.length) return [];
+    const latestDate = bills
+      .map((bill) => String(bill.date || ''))
+      .sort()
+      .slice(-1)[0];
+    const targetMonth = latestDate.slice(0, 7);
+    const customerMap = new Map(customers.map((c) => [Number(c.id), c.name]));
+
+    const grouped = bills.reduce((map, bill) => {
+      if (!String(bill.date || '').startsWith(targetMonth)) return map;
+      const cid = Number(bill.customer_id);
+      if (!map.has(cid)) {
+        map.set(cid, { customerId: cid, total: 0, count: 0 });
+      }
+      const row = map.get(cid);
+      row.total += Number(bill.total || 0);
+      row.count += 1;
+      return map;
+    }, new Map());
+
+    return [...grouped.values()]
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5)
+      .map((row) => ({
+        ...row,
+        name: customerMap.get(row.customerId) || `KH #${row.customerId}`,
+      }));
+  }, [bills, customers]);
+
   const goHome = () => navigate('/');
   const logout = () => {
     localStorage.removeItem('currentUser');
     window.dispatchEvent(new Event('userUpdated'));
     navigate('/login');
+    setLogoutModalOpen(false);
   };
 
-  const openCreate = () => {
-    setIsNew(true);
-    setForm(emptyForm());
-    setView('form');
-    setSaveError('');
-  };
-
-  const openEdit = (p) => {
-    setIsNew(false);
-    setForm(productToForm(p));
-    setView('form');
-    setSaveError('');
-  };
-
-  const cancelForm = () => {
-    setView('list');
-    setForm(emptyForm());
-    setIsNew(false);
-    setSaveError('');
-  };
-
-  const handleFormChange = (field, value) => {
-    setForm((f) => ({ ...f, [field]: value }));
-  };
-
-  const handleSubmitForm = (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      setSaveError('Vui lòng nhập tên sản phẩm');
-      return;
-    }
-    const nextId = products.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1;
-    const built = formToProduct(form, nextId);
-
-    let nextList;
-    if (isNew) {
-      nextList = [...products, built];
-    } else {
-      const idx = products.findIndex((p) => String(p.id) === String(form.id));
-      if (idx === -1) {
-        setSaveError('Không tìm thấy sản phẩm để cập nhật');
-        return;
-      }
-      nextList = products.map((p) => (String(p.id) === String(form.id) ? built : p));
-    }
-    persistProducts(nextList);
-  };
-
-  const handleDelete = (id) => {
-    if (!window.confirm('Xóa sản phẩm này?')) return;
-    const nextList = products.filter((p) => String(p.id) !== String(id));
-    persistProducts(nextList);
-  };
+  const closeMobileNav = () => setMobileSidebarOpen(false);
 
   if (!allowed) {
-    return <div className="admin-page" />;
+    return <div className="ruang-boot" aria-hidden />;
   }
 
   return (
-    <div className="admin-page">
-      <header className="admin-topbar">
-        <h1 className="admin-topbar__title">Quản trị sản phẩm</h1>
-        <div className="admin-topbar__actions">
-          <button type="button" className="admin-topbar__btn" onClick={goHome}>
-            Trang chủ
-          </button>
-          <button type="button" className="admin-topbar__btn admin-topbar__btn--primary" onClick={logout}>
-            Đăng xuất
-          </button>
+    <div className="ruang-layout">
+      <div
+        className={`ruang-overlay${mobileSidebarOpen ? ' is-visible' : ''}`}
+        onClick={closeMobileNav}
+        aria-hidden={!mobileSidebarOpen}
+      />
+
+      <aside className={`ruang-sidebar${mobileSidebarOpen ? ' is-open' : ''}`}>
+        <div className="ruang-sidebar__brand">
+          <span className="ruang-sidebar__brand-icon">
+            <i className="fa-solid fa-layer-group" aria-hidden />
+          </span>
+          <span>GalaxyCafe</span>
         </div>
-      </header>
+        <hr className="ruang-sidebar__divider" />
+        <div className="ruang-sidebar__heading">Tiện ích</div>
+        <ul className="ruang-sidebar__nav">
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'dashboard' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('dashboard');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-gauge-high" aria-hidden />
+              Trang chủ
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'products' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('products');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-box" aria-hidden />
+              Sản phẩm
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'category' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('category');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-tags" aria-hidden />
+              Danh mục
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'customer' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('customer');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-address-book" aria-hidden />
+              Khách hàng
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'employee' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('employee');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-id-card" aria-hidden />
+              Nhân viên
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'bill' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('bill');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-file-invoice-dollar" aria-hidden />
+              Hóa đơn
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`ruang-sidebar__link${adminSection === 'invoiceDetails' ? ' is-active' : ''}`}
+              onClick={() => {
+                setAdminSection('invoiceDetails');
+                closeMobileNav();
+              }}
+            >
+              <i className="fa-solid fa-file-lines" aria-hidden />
+              Chi tiết HĐ
+            </button>
+          </li>
+        </ul>
+      </aside>
 
-      <div className="admin-body">
-        <p className="admin-msg admin-msg--hint">
-          Thêm / sửa / xóa sẽ ghi vào file <code>public/products.json</code> khi chạy dev hoặc preview (có API Vite).
-        </p>
-        {loadError && <div className="admin-msg admin-msg--error">{loadError}</div>}
-        {saveError && <div className="admin-msg admin-msg--error">{saveError}</div>}
-
-        {loading ? (
-          <p>Đang tải…</p>
-        ) : view === 'list' ? (
-          <>
-            <div className="admin-toolbar">
-              <button type="button" className="admin-btn" onClick={openCreate} disabled={saving}>
-                + Thêm sản phẩm
+      <div className="ruang-shell">
+        <header className="ruang-topbar">
+          <button
+            type="button"
+            className="ruang-topbar__toggle"
+            onClick={() => setMobileSidebarOpen((v) => !v)}
+            aria-label="Menu"
+          >
+            <i className="fa-solid fa-bars" />
+          </button>
+          <div className="ruang-breadcrumb-wrap">
+          </div>
+          <div className="ruang-topbar__right">
+            <button type="button" className="ruang-notify" aria-label="Tin nhắn">
+              <i className="fa-regular fa-comments" />
+              <span className="ruang-badge">{Math.min(9, stats.total)}+</span>
+            </button>
+            <button type="button" className="ruang-notify" aria-label="Thông báo">
+              <i className="fa-regular fa-bell" />
+              <span className="ruang-badge">3+</span>
+            </button>
+            <div className="ruang-user" ref={userMenuRef}>
+              <button
+                type="button"
+                className="ruang-user__toggle"
+                onClick={() => setUserMenuOpen((v) => !v)}
+                aria-expanded={userMenuOpen}
+              >
+                <span className="ruang-user__avatar">{staffInitials}</span>
+                <span className="ruang-user__name">{staffDisplayName}</span>
+                <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.65rem', opacity: 0.6 }} />
               </button>
-            </div>
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Tên</th>
-                    <th>Ảnh (key)</th>
-                    <th>Giá</th>
-                    <th>Danh mục</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.id}</td>
-                      <td>{p.name}</td>
-                      <td>{p.imageKey}</td>
-                      <td>{p.currentPrice}</td>
-                      <td>
-                        {p.categoryid != null
-                          ? categories.find((c) => Number(c.id) === Number(p.categoryid))?.name ??
-                            p.categoryid
-                          : '—'}
-                      </td>
-                      <td>
-                        <div className="admin-table__actions">
-                          <button
-                            type="button"
-                            className="admin-table__link"
-                            onClick={() => openEdit(p)}
-                            disabled={saving}
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            type="button"
-                            className="admin-table__link admin-table__link--danger"
-                            onClick={() => handleDelete(p.id)}
-                            disabled={saving}
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <form className="admin-form-card" onSubmit={handleSubmitForm}>
-            <h2>{isNew ? 'Thêm sản phẩm' : 'Sửa sản phẩm'}</h2>
-            <div className="admin-form-grid">
-              {!isNew && (
-                <label>
-                  ID
-                  <input value={form.id} readOnly />
-                </label>
+              {userMenuOpen && (
+                <div className="ruang-user__menu" role="menu">
+                  <div className="ruang-user__menu-title">Tài khoản</div>
+                  <button type="button" role="menuitem" onClick={goHome}>
+                    <i className="fa-solid fa-house" />
+                    Trang chủ
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      setLogoutModalOpen(true);
+                    }}
+                  >
+                    <i className="fa-solid fa-right-from-bracket" />
+                    Đăng xuất
+                  </button>
+                </div>
               )}
-              <label className="admin-form-grid__full">
-                Tên
-                <input
-                  value={form.name}
-                  onChange={(e) => handleFormChange('name', e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                imageKey
-                <input
-                  value={form.imageKey}
-                  onChange={(e) => handleFormChange('imageKey', e.target.value)}
-                  placeholder="vd: sp1"
-                />
-              </label>
-              <label>
-                Danh mục
-                <select
-                  value={form.categoryid}
-                  onChange={(e) => handleFormChange('categoryid', e.target.value)}
-                >
-                  <option value="">— Không —</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                size S
-                <input value={form.sizeS} onChange={(e) => handleFormChange('sizeS', e.target.value)} />
-              </label>
-              <label>
-                size M
-                <input value={form.sizeM} onChange={(e) => handleFormChange('sizeM', e.target.value)} />
-              </label>
-              <label>
-                size L
-                <input value={form.sizeL} onChange={(e) => handleFormChange('sizeL', e.target.value)} />
-              </label>
-              <label>
-                Giá hiện tại
-                <input
-                  value={form.currentPrice}
-                  onChange={(e) => handleFormChange('currentPrice', e.target.value)}
-                />
-              </label>
-              <label>
-                Giá gốc
-                <input
-                  value={form.originalPrice}
-                  onChange={(e) => handleFormChange('originalPrice', e.target.value)}
-                />
-              </label>
-              <label>
-                Giảm giá
-                <input value={form.discount} onChange={(e) => handleFormChange('discount', e.target.value)} />
-              </label>
-              <label>
-                Đánh giá
-                <input value={form.rating} onChange={(e) => handleFormChange('rating', e.target.value)} />
-              </label>
-              <label>
-                Đã bán
-                <input value={form.sold} onChange={(e) => handleFormChange('sold', e.target.value)} />
-              </label>
             </div>
-            <div className="admin-form-actions">
-              <button type="submit" className="admin-btn" disabled={saving}>
-                {saving ? 'Đang lưu…' : 'Lưu'}
+          </div>
+        </header>
+
+        <main className="ruang-main">
+          {adminSection === 'dashboard' && loadError && (
+            <div className="admin-msg admin-msg--error">{loadError}</div>
+          )}
+
+          {adminSection === 'products' ? (
+            <AdminProduct embedded />
+          ) : adminSection === 'category' ? (
+            <AdminCategory embedded />
+          ) : adminSection === 'customer' ? (
+            <AdminCustomer embedded />
+          ) : adminSection === 'employee' ? (
+            <AdminEmployee embedded />
+          ) : adminSection === 'bill' ? (
+            <AdminBill embedded />
+          ) : adminSection === 'invoiceDetails' ? (
+            <AdminInvoiceDetails embedded />
+          ) : loading ? (
+            <div className="ruang-loading">Đang tải…</div>
+          ) : (
+            <>
+              <div className="ruang-cards">
+                <div className="ruang-stat-card">
+                  <div className="ruang-stat-card__body">
+                    <div className="ruang-stat-card__label">Doanh thu</div>
+                    <div className="ruang-stat-card__value">{fmtCurrency(stats.revenue)}</div>
+                    <div className="ruang-stat-card__badge">{fmtNumber(bills.length)} hóa đơn</div>
+                  </div>
+                  <div className="ruang-stat-card__icon" aria-hidden>
+                    <i className="fa-solid fa-sack-dollar" />
+                  </div>
+                </div>
+                <div className="ruang-stat-card ruang-stat-card--green">
+                  <div className="ruang-stat-card__body">
+                    <div className="ruang-stat-card__label">Sản phẩm đã bán</div>
+                    <div className="ruang-stat-card__value">{fmtNumber(stats.soldSum)}</div>
+                    <div className="ruang-stat-card__badge">Từ invoice details</div>
+                  </div>
+                  <div className="ruang-stat-card__icon" aria-hidden>
+                    <i className="fa-solid fa-cart-shopping" />
+                  </div>
+                </div>
+                <div className="ruang-stat-card ruang-stat-card--cyan">
+                  <div className="ruang-stat-card__body">
+                    <div className="ruang-stat-card__label">Khách hàng</div>
+                    <div className="ruang-stat-card__value">{fmtNumber(customers.length)}</div>
+                    <div className="ruang-stat-card__badge">{fmtNumber(employees.length)} nhân viên</div>
+                  </div>
+                  <div className="ruang-stat-card__icon" aria-hidden>
+                    <i className="fa-solid fa-users" />
+                  </div>
+                </div>
+                <div className="ruang-stat-card ruang-stat-card--amber">
+                  <div className="ruang-stat-card__body">
+                    <div className="ruang-stat-card__label">Danh mục / Bill TB</div>
+                    <div className="ruang-stat-card__value">
+                      {fmtNumber(stats.catCount)} / {fmtCurrency(stats.avgBill)}
+                    </div>
+                    <div className="ruang-stat-card__badge ruang-stat-card__badge--muted">
+                      {stats.uncategorized > 0 ? `${stats.uncategorized} SP chưa gán` : 'Dữ liệu đồng bộ'}
+                    </div>
+                  </div>
+                  <div className="ruang-stat-card__icon" aria-hidden>
+                    <i className="fa-solid fa-layer-group" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="ruang-dashboard-grid">
+                <div className="ruang-card">
+                  <div className="ruang-card__title-bar">
+                    <h6>Doanh thu theo ngày</h6>
+                  </div>
+                  <div className="ruang-revenue-list">
+                    {revenueByDate.map((row) => (
+                      <div className="ruang-revenue-item" key={row.date}>
+                        <div className="ruang-revenue-item__head">
+                          <span>{row.date}</span>
+                          <strong>{fmtCurrency(row.total)}</strong>
+                        </div>
+                        <div className="ruang-revenue-item__bar">
+                          <div className="ruang-revenue-item__fill" style={{ width: `${row.percent}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="ruang-card">
+                  <div className="ruang-card__title-bar">
+                    <h6>Sản phẩm đã bán</h6>
+                  </div>
+                  <div className="ruang-sold-list">
+                    {topSoldProducts.map((item, idx) => (
+                      <div className="ruang-sold-item" key={item.id}>
+                        <div className="ruang-sold-item__head">
+                          <span>{item.name}</span>
+                          <strong>{item.sold} / 800</strong>
+                        </div>
+                        <div className="ruang-sold-item__bar">
+                          <div
+                            className={`ruang-sold-item__fill ruang-sold-item__fill--${idx % 4}`}
+                            style={{ width: `${item.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="ruang-bottom-grid">
+                <div className="ruang-card">
+                  <div className="ruang-card__title-bar">
+                    <h6>Hóa đơn</h6>
+                    <button type="button" className="ruang-mini-btn">
+                      Xem thêm <i className="fa-solid fa-chevron-right" />
+                    </button>
+                  </div>
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Khách hàng</th>
+                          <th>Mục</th>
+                          <th>Trạng thái</th>
+                          <th>Hoạt động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {billTableRows.map((row) => (
+                          <tr key={row.id}>
+                            <td>{row.billCode}</td>
+                            <td>{row.customerName}</td>
+                            <td>{row.itemName}</td>
+                            <td>
+                              <span className={`ruang-status ruang-status--${row.status.cls}`}>
+                                {row.status.label}
+                              </span>
+                            </td>
+                            <td>
+                              <button type="button" className="ruang-detail-btn">
+                                Chi tiết
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="ruang-card">
+                  <div className="ruang-vip-title">Khách hàng VIP tháng</div>
+                  <div className="ruang-vip-list">
+                    {vipCustomers.map((vip) => (
+                      <div key={vip.customerId} className="ruang-vip-item">
+                        <strong>{vip.name}</strong>
+                        <small>
+                          {vip.count} đơn · {fmtCurrency(vip.total)}
+                        </small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </main>
+
+        <footer className="ruang-footer">
+          copyright © — Quản lý bán hàng cafe · giao diện theo phong cách{' '}
+          <a href="https://themewagon.github.io/ruang-admin/index.html" target="_blank" rel="noreferrer">
+          GalaxyCafe
+          </a>
+        </footer>
+      </div>
+
+      {logoutModalOpen && (
+        <div
+          className="ruang-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ruang-logout-title"
+        >
+          <div className="ruang-modal">
+            <div className="ruang-modal__header">
+              <h5 id="ruang-logout-title">Ohh No!</h5>
+              <button
+                type="button"
+                className="ruang-modal__close"
+                onClick={() => setLogoutModalOpen(false)}
+                aria-label="Đóng"
+              >
+                ×
               </button>
-              <button type="button" className="admin-btn admin-btn--ghost" onClick={cancelForm} disabled={saving}>
+            </div>
+            <div className="ruang-modal__body">Bạn có chắc muốn đăng xuất?</div>
+            <div className="ruang-modal__footer">
+              <button type="button" className="ruang-modal__btn" onClick={() => setLogoutModalOpen(false)}>
                 Hủy
               </button>
+              <button type="button" className="ruang-modal__btn ruang-modal__btn--danger" onClick={logout}>
+                Đăng xuất
+              </button>
             </div>
-          </form>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

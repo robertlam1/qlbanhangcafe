@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { imageMap } from '../../utils/productImages';
+import { filterProductsBySearch } from '../../utils/productSearch';
 import './ProductList.css';
 
 const PRODUCTS_PER_PAGE = 6;
@@ -13,6 +15,8 @@ const ProductList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchParams] = useSearchParams();
+    const qParam = (searchParams.get('q') || '').trim();
 
     useEffect(() => {
         const loadData = async () => {
@@ -48,10 +52,14 @@ const ProductList = () => {
         loadData();
     }, []);
 
-    const filteredProducts =
-        selectedCategoryId == null
+    const filteredProducts = useMemo(() => {
+        if (qParam) {
+            return filterProductsBySearch(products, qParam);
+        }
+        return selectedCategoryId == null
             ? products
             : products.filter((p) => p.categoryid === selectedCategoryId);
+    }, [products, selectedCategoryId, qParam]);
 
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
 
@@ -61,7 +69,12 @@ const ProductList = () => {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedCategoryId]);
+    }, [selectedCategoryId, qParam]);
+
+    /** Khi tìm theo tên (?q=), bỏ chọn danh mục để lọc đúng kiểu “theo tên” trên cả cửa hàng. */
+    useEffect(() => {
+        if (qParam) setSelectedCategoryId(null);
+    }, [qParam]);
 
     const safePage = Math.min(currentPage, totalPages);
     const start = (safePage - 1) * PRODUCTS_PER_PAGE;
@@ -109,15 +122,23 @@ const ProductList = () => {
                     </aside>
                 )}
                 <div className="product-list-main">
-                    {filteredProducts.length === 0 ? (
+                    {qParam ? (
+                        <p className="product-list-search-hint" role="status">
+                            {filteredProducts.length > 0
+                                ? `Tìm theo tên «${qParam}» — ${filteredProducts.length} sản phẩm`
+                                : `Không có sản phẩm khớp «${qParam}». Thử từ khóa khác, hoặc chọn «Tất cả» ở danh mục để tìm trên toàn bộ tên sản phẩm.`}
+                        </p>
+                    ) : null}
+                    {filteredProducts.length === 0 && !qParam ? (
                         <p className="product-list-empty">Không có sản phẩm trong danh mục này.</p>
-                    ) : (
+                    ) : null}
+                    {filteredProducts.length > 0 ? (
                     <div className="product-list">
                         {visibleProducts.map((product) => (
                             <ProductCard key={product.id} product={product} />
                         ))}
                     </div>
-                    )}
+                    ) : null}
                     {filteredProducts.length > PRODUCTS_PER_PAGE && filteredProducts.length > 0 && (
                         <div className="product-list-pagination" role="navigation" aria-label="Phân trang sản phẩm">
                             <button

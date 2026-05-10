@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 import logoImage from '../../img/logo.png';
+import { imageMap } from '../../utils/productImages';
+import { normalizeSearchText, rankProductsBySearch } from '../../utils/productSearch';
+
+const jsonBase = import.meta.env.BASE_URL || '/';
 
 const Header = () => {
     const [hoveredMenu, setHoveredMenu] = useState(null);
@@ -9,7 +13,16 @@ const Header = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef(null);
+    const searchBoxRef = useRef(null);
+    const [products, setProducts] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
     const navigate = useNavigate();
+
+    const searchMatches = useMemo(
+        () => rankProductsBySearch(products, searchQuery, 10),
+        [products, searchQuery]
+    );
 
     // Lấy số lượng món trong giỏ hàng (tổng quantity) và thông tin user
     useEffect(() => {
@@ -69,6 +82,39 @@ const Header = () => {
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch(`${jsonBase}products.json`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+                const mapped = data.map((item) => ({
+                    ...item,
+                    image: imageMap[item.imageKey] || item.image
+                }));
+                setProducts(mapped);
+            } catch (err) {
+                console.error('Lỗi tải sản phẩm cho tìm kiếm:', err);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!searchFocused) return;
+        const onPointerDown = (e) => {
+            if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+                setSearchFocused(false);
+            }
+        };
+        document.addEventListener('mousedown', onPointerDown);
+        return () => document.removeEventListener('mousedown', onPointerDown);
+    }, [searchFocused]);
+
+    useEffect(() => {
         if (!userMenuOpen) return;
         const onPointerDown = (e) => {
             if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
@@ -88,6 +134,20 @@ const Header = () => {
         setUserMenuOpen(false);
         window.dispatchEvent(new Event('userUpdated'));
         navigate('/');
+    };
+
+    const goToProduct = (product) => {
+        setSearchQuery('');
+        setSearchFocused(false);
+        navigate(`/product/${product.id}`, { state: { product } });
+    };
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        const q = normalizeSearchText(searchQuery);
+        if (!q) return;
+        navigate(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
+        setSearchFocused(false);
     };
 
     const userLabel = currentUser ? (currentUser.name || currentUser.user) : 'Đăng nhập';
@@ -117,7 +177,14 @@ const Header = () => {
                     {/* Center: Logo */}
                     <div className="header-logo-container">
                         <div className="phuclong-logo">
-                            <img src={logoImage} alt="Logo" className="header-logo-image" />
+                            <button
+                                type="button"
+                                className="header-logo-btn"
+                                onClick={() => navigate('/')}
+                                aria-label="Về trang chủ"
+                            >
+                                <img src={logoImage} alt="Logo" className="header-logo-image" />
+                            </button>
                         </div>
                     </div>
 
@@ -192,15 +259,85 @@ const Header = () => {
                             onClick={() => navigate('/cart')}
                         >
                             <i className="fas fa-shopping-cart"></i>
-                            <span>Giỏ hàngsssss</span>
+                            <span>Giỏ hàng</span>
                             <span className="cart-badge">{cartCount}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
+            {/* Dải tìm kiếm — tách khỏi menu cho gọn, dễ nhìn */}
+            <div className="header-search-strip" aria-label="Tìm kiếm">
+                <div className="header-search-strip__inner" ref={searchBoxRef}>
+                    <form
+                        className="header-search__form"
+                        onSubmit={handleSearchSubmit}
+                        role="search"
+                    >
+                        <i className="fas fa-search header-search__icon" aria-hidden />
+                        <input
+                            type="search"
+                            className="header-search__input"
+                            placeholder="Tìm theo tên món — gợi ý gần giống sẽ hiện bên dưới"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            aria-label="Tìm kiếm sản phẩm"
+                            aria-autocomplete="list"
+                            aria-controls="header-search-suggestions"
+                            autoComplete="off"
+                        />
+                        <button type="submit" className="header-search__submit">
+                            Tìm
+                        </button>
+                    </form>
+                    {searchFocused && searchQuery.trim().length > 0 && (
+                        <ul
+                            id="header-search-suggestions"
+                            className="header-search__dropdown"
+                            role="listbox"
+                            aria-label="Gợi ý sản phẩm"
+                        >
+                            {searchMatches.length === 0 ? (
+                                <li className="header-search__empty" role="status">
+                                    Không tìm thấy sản phẩm gần giống. Thử từ khóa khác.
+                                </li>
+                            ) : (
+                                searchMatches.map((p) => (
+                                    <li key={p.id} role="presentation">
+                                        <button
+                                            type="button"
+                                            className="header-search__option"
+                                            role="option"
+                                            onClick={() => goToProduct(p)}
+                                        >
+                                            <span className="header-search__thumb-wrap">
+                                                <img
+                                                    src={p.image || 'https://via.placeholder.com/88'}
+                                                    alt=""
+                                                    className="header-search__thumb"
+                                                    loading="lazy"
+                                                />
+                                            </span>
+                                            <span className="header-search__meta">
+                                                <span className="header-search__name">{p.name}</span>
+                                                {p.currentPrice && (
+                                                    <span className="header-search__price">
+                                                        {p.currentPrice}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </button>
+                                    </li>
+                                ))
+                            )}
+                        </ul>
+                    )}
+                </div>
+            </div>
+
             {/* Bottom Section: Navigation Bar */}
-            <nav className="header-navigation">
+            <nav className="header-navigation" aria-label="Điều hướng chính">
                 <div className="nav-content">
                     <a href="/" className="nav-link">TRANG CHỦ</a>
                     

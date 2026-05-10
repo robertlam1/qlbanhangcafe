@@ -9,6 +9,12 @@ import Login from './components/Pages/Login';
 import Signup from './components/Pages/Signup';
 import Profile from './components/Pages/Profile';
 import Admin from './components/Pages/Admin';
+import AdminProduct from './components/Pages/Adminproduct';
+import AdminCategory from './components/Pages/Admincategory';
+import AdminCustomer from './components/Pages/Admincustomer';
+import AdminEmployee from './components/Pages/Adminemployee';
+import AdminBill from './components/Pages/Adminbill';
+import AdminInvoiceDetails from './components/Pages/Admininvoicedetails';
 import Footer from './components/Footer/Footer';
 
 function App() {
@@ -16,7 +22,7 @@ function App() {
   const hideChrome =
     location.pathname === '/login' ||
     location.pathname === '/signup' ||
-    location.pathname === '/admin';
+    location.pathname.startsWith('/admin');
 
   return (
     <>
@@ -31,11 +37,18 @@ function App() {
             </>
           }
         />
+        <Route path="/products" element={<ProductList />} />
         <Route path="/product/:id" element={<DetailProduct />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/products" element={<AdminProduct />} />
+        <Route path="/admin/category" element={<AdminCategory />} />
+        <Route path="/admin/customer" element={<AdminCustomer />} />
+        <Route path="/admin/employee" element={<AdminEmployee />} />
+        <Route path="/admin/bill" element={<AdminBill />} />
+        <Route path="/admin/invoicedetails" element={<AdminInvoiceDetails />} />
         <Route path="/cart" element={<Cart />} />
       </Routes>
       {!hideChrome && <Footer />}
