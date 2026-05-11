@@ -278,7 +278,7 @@ const Header = () => {
                         <input
                             type="search"
                             className="header-search__input"
-                            placeholder="Tìm theo tên món — gợi ý gần giống sẽ hiện bên dưới"
+                            placeholder="Bạn muốn mua gì.."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onFocus={() => setSearchFocused(true)}
